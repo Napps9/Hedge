@@ -1,7 +1,16 @@
-import yahooFinance from 'yahoo-finance2';
+let yahooFinance: any = null;
+
+async function getYahooFinance() {
+  if (!yahooFinance) {
+    const mod = await import('yahoo-finance2');
+    yahooFinance = mod.default;
+  }
+  return yahooFinance;
+}
 
 export async function getSpyQuote() {
-  const quote = await yahooFinance.quote('SPY');
+  const yf = await getYahooFinance();
+  const quote = await yf.quote('SPY');
   return {
     price: quote.regularMarketPrice,
     change: quote.regularMarketChange,
@@ -23,7 +32,8 @@ export async function getSpyHistory(range: string = '1y') {
 
   const config = periodMap[range] || periodMap['1y'];
 
-  const result = await yahooFinance.chart('SPY', {
+  const yf = await getYahooFinance();
+  const result = await yf.chart('SPY', {
     period1: config.period1,
     interval: config.interval,
   });
@@ -39,7 +49,8 @@ export async function getSpyHistory(range: string = '1y') {
 }
 
 export async function getSpyOptions() {
-  const result = await yahooFinance.options('SPY');
+  const yf = await getYahooFinance();
+  const result = await yf.options('SPY');
 
   const puts = result.options?.[0]?.puts || [];
 
@@ -61,7 +72,8 @@ export async function getSpyOptions() {
 }
 
 export async function getSpyOptionsForExpiry(expiryDate: string) {
-  const result = await yahooFinance.options('SPY', { date: new Date(expiryDate) });
+  const yf = await getYahooFinance();
+  const result = await yf.options('SPY', { date: new Date(expiryDate) });
 
   const puts = result.options?.[0]?.puts || [];
 
