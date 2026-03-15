@@ -1,9 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { PlaceResult, Recommendation } from '../types/index.js';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.CLAUDE_API_KEY || '',
-});
+let anthropic: Anthropic | null = null;
+
+function getClient(): Anthropic {
+  if (!anthropic) {
+    anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY || '' });
+  }
+  return anthropic;
+}
 
 export async function getRecommendations(
   query: string,
@@ -54,7 +59,7 @@ Respond ONLY with valid JSON:
 }`;
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await getClient().messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       system: systemPrompt,
