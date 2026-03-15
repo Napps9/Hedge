@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import recommendationRoutes from './routes/recommendations.js';
+import { getStorageMode } from './db/index.js';
 
 dotenv.config();
 
@@ -39,6 +40,13 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 app.listen(PORT, () => {
-  console.log(`Hedge server running on http://localhost:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  const storage = getStorageMode();
+  const hasGoogle = !!process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your_client_id';
+  const hasClaude = !!process.env.CLAUDE_API_KEY && process.env.CLAUDE_API_KEY !== 'sk-your-key';
+
+  console.log(`\n  Hedge server running on http://localhost:${PORT}\n`);
+  console.log(`  Storage:  ${storage === 'postgresql' ? 'PostgreSQL' : 'In-memory (no database needed)'}`);
+  console.log(`  Google:   ${hasGoogle ? 'Configured' : 'Demo mode (mock data)'}`);
+  console.log(`  Claude:   ${hasClaude ? 'Configured' : 'Demo mode (mock recommendations)'}`);
+  console.log('');
 });

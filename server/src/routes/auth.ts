@@ -1,20 +1,27 @@
 import { Router, Request, Response } from 'express';
-import { googleAuth } from '../services/googleAuth.js';
+import jwt from 'jsonwebtoken';
 import { authMiddleware } from '../middleware/auth.js';
-import pg from 'pg';
+import { db } from '../db/index.js';
 
-const { Pool } = pg;
 const router = Router();
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+const isGoogleConfigured =
+  !!process.env.GOOGLE_CLIENT_ID &&
+  process.env.GOOGLE_CLIENT_ID !== 'your_client_id';
 
 // Get OAuth URL
 router.get('/url', (req: Request, res: Response) => {
+  if (!isGoogleConfigured) {
+    // In demo mode, return a flag so the client knows to use demo login
+    return res.json({ url: null, demo: true });
+  }
+
   try {
-    const url = googleAuth.getAuthUrl();
-    res.json({ url });
+    // Dynamic import to avoid errors when Google credentials aren't set
+    import('../services/googleAuth.js').then(({ googleAuth }) => {
+      const url = googleAuth.getAuthUrl();
+      res.json({ url });
+    });
   } catch (error) {
     console.error('Error getting auth URL:', error);
     res.status(500).json({ error: 'Failed to get auth URL' });
@@ -30,12 +37,32 @@ router.post('/callback', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No authorization code provided' });
     }
 
+    const { googleAuth } = await import('../services/googleAuth.js');
     const { jwtToken, userId, email } = await googleAuth.handleCallback(code);
 
     res.json({ token: jwtToken, userId, email });
   } catch (error) {
     console.error('OAuth callback error:', error);
     res.status(500).json({ error: 'Failed to process authentication' });
+  }
+});
+
+// Demo login — creates a demo user without Google OAuth
+router.post('/demo', async (req: Request, res: Response) => {
+  try {
+    const email = 'demo@hedge.app';
+    const userId = await db.upsertUser(email, 'demo-user');
+
+    const token = jwt.sign(
+      { userId, email },
+      process.env.JWT_SECRET || 'hedge-dev-secret-key',
+      { expiresIn: '7d' },
+    );
+
+    res.json({ token, userId, email });
+  } catch (error) {
+    console.error('Demo login error:', error);
+    res.status(500).json({ error: 'Failed to create demo session' });
   }
 });
 
@@ -46,21 +73,13 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const client = await pool.connect();
-    try {
-      const result = await client.query(
-        'SELECT id, email, created_at FROM users WHERE id = $1',
-        [req.user.userId],
-      );
+    const user = await db.getUser(req.user.userId);
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      res.json(result.rows[0]);
-    } finally {
-      client.release();
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
+
+    res.json(user);
   } catch (error) {
     console.error('Error getting current user:', error);
     res.status(500).json({ error: 'Failed to get user' });
