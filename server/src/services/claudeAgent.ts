@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { CalendarEvent, EmailSummary, RecommendationResponse } from '../types/index.js';
+import { CalendarEvent, EmailSummary, PlaceResult, RecommendationResponse } from '../types/index.js';
 
 const hasApiKey = !!process.env.CLAUDE_API_KEY && process.env.CLAUDE_API_KEY !== 'sk-your-key';
 
@@ -7,134 +7,83 @@ const anthropic = hasApiKey
   ? new Anthropic({ apiKey: process.env.CLAUDE_API_KEY })
   : null;
 
-function getMockRecommendations(query: string): RecommendationResponse {
-  const lowerQuery = query.toLowerCase();
-
-  if (lowerQuery.includes('dinner') || lowerQuery.includes('restaurant') || lowerQuery.includes('eat')) {
-    return {
-      recommendations: [
-        {
-          name: 'Osteria Francescana',
-          category: 'restaurant',
-          why_recommended: 'Highly rated Italian fine dining. Your Saturday evening is free, making it perfect for a leisurely dinner.',
-          google_places_link: 'https://maps.google.com/?q=Osteria+Francescana',
-          suggested_times: 'Saturday 7:30 PM or Sunday 8:00 PM',
-        },
-        {
-          name: 'Blue Hill',
-          category: 'restaurant',
-          why_recommended: 'Farm-to-table dining with seasonal menus. Based on your email interests in sustainable food, this is a great match.',
-          google_places_link: 'https://maps.google.com/?q=Blue+Hill+Restaurant',
-          suggested_times: 'Friday 7:00 PM',
-        },
-      ],
-      reasoning: 'Based on your free evenings this weekend and interest in quality dining.',
-    };
-  }
-
-  if (lowerQuery.includes('coffee') || lowerQuery.includes('cafe') || lowerQuery.includes('work')) {
-    return {
-      recommendations: [
-        {
-          name: 'Intelligentsia Coffee',
-          category: 'cafe',
-          why_recommended: 'Quiet atmosphere with excellent wifi. Great for focused work sessions between your meetings.',
-          google_places_link: 'https://maps.google.com/?q=Intelligentsia+Coffee',
-          suggested_times: 'Weekday mornings before 10 AM',
-        },
-        {
-          name: 'Stumptown Coffee Roasters',
-          category: 'cafe',
-          why_recommended: 'Known for their single-origin pour-overs. A 10-minute walk from your afternoon meeting location.',
-          google_places_link: 'https://maps.google.com/?q=Stumptown+Coffee',
-        },
-      ],
-      reasoning: 'Selected cafes near your usual locations with good work environments.',
-    };
-  }
-
-  // Default recommendations
-  return {
-    recommendations: [
-      {
-        name: 'The High Line',
-        category: 'park',
-        why_recommended: 'An elevated park perfect for a midday break. You have a 2-hour gap on Wednesday afternoon.',
-        google_places_link: 'https://maps.google.com/?q=The+High+Line',
-        suggested_times: 'Wednesday 2:00 PM - 4:00 PM',
-      },
-      {
-        name: 'MoMA',
-        category: 'museum',
-        why_recommended: 'The new contemporary exhibit opened this week. Your Saturday morning is completely free.',
-        google_places_link: 'https://maps.google.com/?q=MoMA+Museum',
-        suggested_times: 'Saturday 10:00 AM',
-      },
-      {
-        name: 'Eataly',
-        category: 'market',
-        why_recommended: 'Italian food market and dining. Based on your recent emails about cooking, you might enjoy exploring their fresh ingredients.',
-        google_places_link: 'https://maps.google.com/?q=Eataly',
-      },
-    ],
-    reasoning: 'A mix of activities based on your available free time and interests.',
-  };
-}
-
 export const claudeAgent = {
   generateRecommendations: async (
     query: string,
     calendar: CalendarEvent[],
     emailSummary: EmailSummary,
+    nearbyPlaces: PlaceResult[],
+    city: string | null,
   ): Promise<RecommendationResponse> => {
-    // Mock fallback when no API key
     if (!anthropic) {
-      console.log('CLAUDE_API_KEY not set — using mock recommendations');
-      return getMockRecommendations(query);
+      console.log('CLAUDE_API_KEY not set — returning empty recommendations');
+      return { recommendations: [], reasoning: 'No API key configured' };
     }
 
     try {
+      // Format calendar context
       const calendarContext = calendar
-        .slice(0, 5)
-        .map(
-          (e) =>
-            `- ${e.summary} on ${e.startTime.toDateString()} at ${e.startTime.toLocaleTimeString()} ${e.location ? `(${e.location})` : ''}`,
-        )
+        .slice(0, 7)
+        .map((e) => {
+          const day = e.startTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+          const time = e.startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          const endTime = e.endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          return `- ${e.summary}: ${day} ${time}–${endTime}${e.location ? ` at ${e.location}` : ''}`;
+        })
         .join('\n');
 
-      const emailContext = `
-Interested in: ${emailSummary.topics.slice(0, 3).join(', ')}
-Recent contacts: ${emailSummary.senders.slice(0, 3).join(', ')}
-      `.trim();
+      // Format email interests
+      const emailContext = emailSummary.topics.length > 0
+        ? emailSummary.topics.join(', ')
+        : 'No specific interests detected';
 
-      const systemPrompt = `You are Hedge, an AI lifestyle assistant. You help users discover and book places based on their schedule, interests, and preferences.
+      // Format nearby places
+      const placesContext = nearbyPlaces.length > 0
+        ? nearbyPlaces
+            .map((p, i) => {
+              let line = `${i + 1}. ${p.name} — ${p.address}`;
+              if (p.rating) line += ` (${p.rating}/5)`;
+              if (p.priceLevel) line += ` [${p.priceLevel}]`;
+              line += `\n   Maps: ${p.googleMapsUrl}`;
+              return line;
+            })
+            .join('\n')
+        : '(No specific places found — make general recommendations for the area)';
 
-User Context:
-Calendar Events (upcoming):
-${calendarContext || '(No upcoming events)'}
+      const systemPrompt = `You are Hedge, a smart lifestyle assistant. You recommend real places to visit based on the user's schedule, interests, and location.
 
-Interests from emails:
+USER'S LOCATION: ${city || 'Unknown'}
+
+UPCOMING CALENDAR:
+${calendarContext || '(Calendar is empty — user is free)'}
+
+INTERESTS (from recent emails):
 ${emailContext}
 
-Your task:
-1. When asked about places to visit, recommend 2-3 specific places that match their interests and schedule
-2. For each recommendation, explain WHY it matches their interests/schedule
-3. If they ask about availability/booking, suggest specific times that work with their calendar
-4. Format your response as JSON with this structure:
+NEARBY PLACES MATCHING THEIR REQUEST:
+${placesContext}
+
+INSTRUCTIONS:
+- Pick the 2-3 BEST places from the nearby results above (if available)
+- Explain why each place fits their schedule and interests specifically
+- If they ask about availability, check their calendar and suggest free time slots
+- If no nearby places were found, recommend based on general knowledge of ${city || 'their area'}
+- Include the real Google Maps link for each recommendation
+- Be conversational and specific — reference their actual calendar events by name
+
+Respond ONLY with valid JSON in this exact format:
 {
   "recommendations": [
     {
-      "name": "Place Name",
-      "category": "restaurant|museum|park|etc",
-      "why_recommended": "Why this matches their interests/schedule",
-      "google_places_link": "https://maps.google.com/?q=...",
-      "suggested_times": "Suggested times if applicable"
+      "name": "Actual Place Name",
+      "category": "restaurant|cafe|museum|park|etc",
+      "why_recommended": "Specific reason tied to their schedule/interests",
+      "google_places_link": "https://www.google.com/maps/place/?q=place_id:...",
+      "suggested_times": "Specific day/time suggestion based on calendar gaps"
     }
   ],
-  "reasoning": "Brief overall reasoning"
-}
-
-Be concise, specific, and helpful. Focus on genuine recommendations based on their schedule and interests.`;
+  "reasoning": "Brief summary of why these were chosen"
+}`;
 
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',

@@ -1,50 +1,39 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import './index.css';
-import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
-import { authAPI } from './services/api';
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
+    const ensureSession = async () => {
+      let token = localStorage.getItem('token');
+
+      if (!token) {
+        // Auto-create a session
         try {
-          await authAPI.getCurrentUser();
-          setIsAuthenticated(true);
+          const response = await axios.post(`${API_BASE}/auth/demo`);
+          token = response.data.token;
+          localStorage.setItem('token', token!);
         } catch (error) {
-          localStorage.removeItem('token');
-          setIsAuthenticated(false);
+          console.error('Failed to create session:', error);
         }
       }
-      setLoading(false);
+
+      setReady(true);
     };
 
-    checkAuth();
+    ensureSession();
   }, []);
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (!ready) {
+    return null;
   }
 
-  return (
-    <Router>
-      <Routes>
-        <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}
-        />
-        <Route
-          path="/"
-          element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
-        />
-      </Routes>
-    </Router>
-  );
+  return <DashboardPage />;
 }
 
 export default App;

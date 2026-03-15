@@ -61,8 +61,20 @@ export interface EmailSummary {
   }>;
 }
 
+export interface PlaceResult {
+  name: string;
+  address: string;
+  rating: number | null;
+  priceLevel: string | null;
+  types: string[];
+  googleMapsUrl: string;
+  placeId: string;
+}
+
 export interface RecommendationRequest {
   query: string;
+  latitude?: number;
+  longitude?: number;
   userContext?: {
     calendar: CalendarEvent[];
     emailSummary: EmailSummary;

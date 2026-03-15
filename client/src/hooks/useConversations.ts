@@ -24,7 +24,7 @@ export function useConversations() {
     }, 100);
   };
 
-  const submitQuery = useCallback(async (query: string) => {
+  const submitQuery = useCallback(async (query: string, location?: { latitude: number | null; longitude: number | null }) => {
     setError(null);
 
     // Optimistic: add query card with loading state
@@ -41,7 +41,11 @@ export function useConversations() {
     scrollToBottom();
 
     try {
-      const response = await recommendationAPI.getRecommendations(query);
+      const response = await recommendationAPI.getRecommendations(
+        query,
+        location?.latitude,
+        location?.longitude,
+      );
       const { recommendations } = response.data;
 
       // Replace loading entry with real data

@@ -1,25 +1,19 @@
-import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { authAPI } from '../services/api';
 import { useConversations } from '../hooks/useConversations';
+import { useGeolocation } from '../hooks/useGeolocation';
 import ConversationCard from '../components/ConversationCard';
 import InputBox from '../components/InputBox';
 import EmptyState from '../components/EmptyState';
 
 function DashboardPage() {
-  const navigate = useNavigate();
   const { conversations, isLoading, error, submitQuery, loadHistory, scrollRef } =
     useConversations();
+  const { latitude, longitude, city } = useGeolocation();
   const [suggestion, setSuggestion] = useState('');
 
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
-
-  const handleLogout = async () => {
-    await authAPI.logout();
-    navigate('/login');
-  };
 
   const handleSuggestionClick = (text: string) => {
     setSuggestion(text);
@@ -27,7 +21,7 @@ function DashboardPage() {
 
   const handleSubmit = (query: string) => {
     setSuggestion('');
-    submitQuery(query);
+    submitQuery(query, { latitude, longitude });
   };
 
   const hasConversations = conversations.length > 0;
@@ -37,13 +31,12 @@ function DashboardPage() {
       {/* Header */}
       <header className="shrink-0 border-b border-border/60 py-4">
         <div className="container flex justify-between items-center">
-          <h1 className="text-xl font-extralight tracking-wide">Hedge</h1>
-          <button
-            onClick={handleLogout}
-            className="text-caption text-muted hover:text-primary transition-colors duration-200"
-          >
-            Sign out
-          </button>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-xl font-extralight tracking-wide">Hedge</h1>
+            {city && (
+              <span className="text-micro text-muted">{city}</span>
+            )}
+          </div>
         </div>
       </header>
 

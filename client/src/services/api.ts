@@ -29,8 +29,8 @@ export const authAPI = {
 };
 
 export const recommendationAPI = {
-  getRecommendations: (query: string) =>
-    apiClient.post('/api/recommendations', { query }),
+  getRecommendations: (query: string, latitude?: number | null, longitude?: number | null) =>
+    apiClient.post('/api/recommendations', { query, latitude, longitude }),
   getConversationHistory: () =>
     apiClient.get('/api/conversations'),
 };

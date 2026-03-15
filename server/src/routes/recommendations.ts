@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { claudeAgent } from '../services/claudeAgent.js';
 import { googleCalendar } from '../services/googleCalendar.js';
 import { googleGmail } from '../services/googleGmail.js';
+import { googlePlaces } from '../services/googlePlaces.js';
 import { db } from '../db/index.js';
 
 const router = Router();
@@ -14,20 +15,47 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const { query } = req.body;
+    const { query, latitude, longitude } = req.body;
 
     if (!query || typeof query !== 'string' || query.trim() === '') {
       return res.status(400).json({ error: 'Invalid query' });
     }
 
-    // Fetch user's calendar and email context
+    // Fetch user context in parallel
     const [calendar, emailSummary] = await Promise.all([
       googleCalendar.getUpcomingEvents(req.user.userId),
       googleGmail.getEmailSummary(req.user.userId),
     ]);
 
-    // Generate recommendations using Claude (or mock)
-    const result = await claudeAgent.generateRecommendations(query, calendar, emailSummary);
+    // Search for real nearby places if we have location
+    let nearbyPlaces = [];
+    let city: string | null = null;
+
+    if (latitude && longitude) {
+      nearbyPlaces = await googlePlaces.searchNearby(query, latitude, longitude);
+
+      // Get city name from reverse geocoding
+      try {
+        const geoResponse = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+        );
+        if (geoResponse.ok) {
+          const geoData = await geoResponse.json();
+          city = geoData.address?.city || geoData.address?.town || geoData.address?.county || null;
+        }
+      } catch {
+        // City is nice to have
+      }
+    }
+
+    // Generate recommendations using Claude with full context
+    const result = await claudeAgent.generateRecommendations(
+      query,
+      calendar,
+      emailSummary,
+      nearbyPlaces,
+      city,
+    );
 
     // Save to database
     await db.saveConversation(req.user.userId, query, result.recommendations);
