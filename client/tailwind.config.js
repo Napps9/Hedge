@@ -4,9 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        surface: '#fafafa',
-        border: '#e5e5e5',
-        muted: '#999',
+        surface: '#f5f5f5',
+        border: '#d4d4d4',
+        muted: '#737373',
       },
       fontSize: {
         display: ['3rem', { lineHeight: '1.1', fontWeight: '200' }],

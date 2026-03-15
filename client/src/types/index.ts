@@ -15,3 +15,10 @@ export interface Conversation {
   timestamp: Date;
   isLoading: boolean;
 }
+
+export interface UserPreferences {
+  restaurants: string[];
+  cafes: string[];
+  bars: string[];
+  completed: boolean;
+}

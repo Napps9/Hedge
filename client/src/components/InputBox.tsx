@@ -34,17 +34,15 @@ export default function InputBox({ onSubmit, isLoading, initialValue }: Props) {
           value={value}
           onChange={e => setValue(e.target.value)}
           disabled={isLoading}
-          placeholder="Find a place, ask about your schedule..."
-          className="w-full py-4 pr-12 text-body bg-transparent border-b border-border placeholder:text-muted/40 focus:border-black focus:outline-none transition-colors disabled:opacity-40"
+          placeholder="When are you free? What are you looking for?"
+          className="w-full py-4 pr-14 text-body bg-transparent border-b-2 border-neutral-800 placeholder:text-neutral-400 focus:border-black focus:outline-none transition-colors disabled:opacity-40"
         />
         <button
           type="submit"
           disabled={!value.trim() || isLoading}
-          className="absolute right-0 p-2 text-muted hover:text-black disabled:opacity-20 transition-all"
+          className="absolute right-0 px-4 py-2 bg-black text-white rounded-full text-caption font-medium disabled:opacity-20 hover:bg-neutral-800 transition-all"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          Search
         </button>
       </div>
     </form>
