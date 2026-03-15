@@ -1,54 +1,45 @@
 import { Recommendation } from '../types';
 
-interface RecommendationCardProps {
-  recommendation: Recommendation;
-}
-
-function RecommendationCard({ recommendation }: RecommendationCardProps) {
-  const { name, category, why_recommended, google_places_link, suggested_times } = recommendation;
-
+export default function RecommendationCard({ rec }: { rec: Recommendation }) {
   return (
-    <div className="group py-5 border-b border-border/50 last:border-0 transition-colors duration-200">
+    <div className="py-5 border-b border-border/50 last:border-0">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          {/* Name and category */}
           <div className="flex items-center gap-3 mb-2">
-            <h4 className="text-title truncate">{name}</h4>
-            {category && (
-              <span className="shrink-0 px-2.5 py-0.5 text-micro uppercase tracking-wider
-                             text-muted bg-subtle rounded-full">
-                {category}
+            <h4 className="text-[1.05rem] font-medium truncate">{rec.name}</h4>
+            {rec.category && (
+              <span className="shrink-0 px-2.5 py-0.5 text-micro uppercase tracking-wider text-muted bg-surface rounded-full">
+                {rec.category}
               </span>
+            )}
+            {rec.rating && (
+              <span className="shrink-0 text-caption text-muted">{rec.rating}/5</span>
+            )}
+            {rec.price && (
+              <span className="shrink-0 text-caption text-muted">{rec.price}</span>
             )}
           </div>
 
-          {/* Why recommended */}
-          <p className="text-caption text-muted leading-relaxed mb-2">
-            {why_recommended}
-          </p>
+          <p className="text-caption text-muted leading-relaxed">{rec.why_recommended}</p>
 
-          {/* Suggested times */}
-          {suggested_times && (
+          {rec.suggested_times && (
             <div className="flex items-center gap-2 mt-3">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   strokeWidth="1.5" className="text-muted/60">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted/60">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              <span className="text-caption text-muted/80">{suggested_times}</span>
+              <span className="text-caption text-muted/80">{rec.suggested_times}</span>
             </div>
           )}
         </div>
 
-        {/* External link */}
-        {google_places_link && (
+        {rec.google_places_link && (
           <a
-            href={google_places_link}
+            href={rec.google_places_link}
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 p-2 text-muted/40 hover:text-primary
-                       transition-colors duration-200"
-            aria-label={`View ${name} on Google Maps`}
+            className="shrink-0 p-2 text-muted/40 hover:text-black transition-colors"
+            aria-label={`View ${rec.name} on Maps`}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M7 17L17 7M17 7H7M17 7v10" strokeLinecap="round" strokeLinejoin="round" />
@@ -59,5 +50,3 @@ function RecommendationCard({ recommendation }: RecommendationCardProps) {
     </div>
   );
 }
-
-export default RecommendationCard;

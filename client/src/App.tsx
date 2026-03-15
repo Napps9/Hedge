@@ -1,39 +1,62 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import './index.css';
-import DashboardPage from './pages/DashboardPage';
-import axios from 'axios';
+import { useGeolocation } from './hooks/useGeolocation';
+import { useConversations } from './hooks/useConversations';
+import ConversationCard from './components/ConversationCard';
+import InputBox from './components/InputBox';
+import EmptyState from './components/EmptyState';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export default function App() {
+  const geo = useGeolocation();
+  const { conversations, isLoading, error, submitQuery, scrollRef } = useConversations();
+  const [suggestion, setSuggestion] = useState('');
 
-function App() {
-  const [ready, setReady] = useState(false);
+  const handleSubmit = (query: string) => {
+    setSuggestion('');
+    submitQuery(query, geo);
+  };
 
-  useEffect(() => {
-    const ensureSession = async () => {
-      let token = localStorage.getItem('token');
+  const hasConversations = conversations.length > 0;
 
-      if (!token) {
-        // Auto-create a session
-        try {
-          const response = await axios.post(`${API_BASE}/auth/demo`);
-          token = response.data.token;
-          localStorage.setItem('token', token!);
-        } catch (error) {
-          console.error('Failed to create session:', error);
-        }
-      }
+  return (
+    <div className="flex flex-col h-screen bg-white">
+      {/* Header */}
+      <header className="shrink-0 border-b border-border/60 py-4">
+        <div className="max-w-[800px] mx-auto px-6 flex items-baseline gap-3">
+          <h1 className="text-xl font-extralight tracking-wide">Hedge</h1>
+          {geo.city && <span className="text-micro text-muted">{geo.city}</span>}
+        </div>
+      </header>
 
-      setReady(true);
-    };
+      {/* Content */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div className="max-w-[800px] mx-auto px-6 py-8">
+          {!hasConversations && !isLoading && (
+            <EmptyState onSuggestion={setSuggestion} />
+          )}
 
-    ensureSession();
-  }, []);
+          {hasConversations && (
+            <div className="max-w-2xl mx-auto">
+              {conversations.map(conv => (
+                <ConversationCard key={conv.id} conv={conv} />
+              ))}
+            </div>
+          )}
 
-  if (!ready) {
-    return null;
-  }
+          {error && (
+            <div className="max-w-2xl mx-auto mt-4">
+              <p className="text-caption text-red-500/80">{error}</p>
+            </div>
+          )}
+        </div>
+      </div>
 
-  return <DashboardPage />;
+      {/* Input */}
+      <div className="shrink-0 border-t border-border/40 bg-white">
+        <div className="max-w-2xl mx-auto px-6 py-4">
+          <InputBox onSubmit={handleSubmit} isLoading={isLoading} initialValue={suggestion} />
+        </div>
+      </div>
+    </div>
+  );
 }
-
-export default App;

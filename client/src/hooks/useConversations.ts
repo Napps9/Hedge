@@ -1,103 +1,61 @@
 import { useState, useCallback, useRef } from 'react';
-import { Recommendation } from '../types';
-import { recommendationAPI } from '../services/api';
+import { Conversation, Recommendation } from '../types';
 
-interface ConversationEntry {
-  id: string;
-  query: string;
-  recommendations: Recommendation[];
-  timestamp: Date;
-  isLoading: boolean;
-}
+const API = 'http://localhost:3000';
 
 export function useConversations() {
-  const [conversations, setConversations] = useState<ConversationEntry[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     setTimeout(() => {
-      scrollRef.current?.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }, 100);
   };
 
-  const submitQuery = useCallback(async (query: string, location?: { latitude: number | null; longitude: number | null }) => {
+  const submitQuery = useCallback(async (
+    query: string,
+    location: { latitude: number | null; longitude: number | null; city: string | null }
+  ) => {
     setError(null);
+    const tempId = `q-${Date.now()}`;
 
-    // Optimistic: add query card with loading state
-    const tempId = `temp-${Date.now()}`;
-    const newEntry: ConversationEntry = {
-      id: tempId,
-      query,
-      recommendations: [],
-      timestamp: new Date(),
-      isLoading: true,
-    };
-
-    setConversations((prev) => [...prev, newEntry]);
+    setConversations(prev => [...prev, {
+      id: tempId, query, recommendations: [], timestamp: new Date(), isLoading: true,
+    }]);
     scrollToBottom();
 
     try {
-      const response = await recommendationAPI.getRecommendations(
-        query,
-        location?.latitude,
-        location?.longitude,
-      );
-      const { recommendations } = response.data;
+      const res = await fetch(`${API}/api/recommendations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          city: location.city,
+        }),
+      });
 
-      // Replace loading entry with real data
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === tempId
-            ? { ...c, recommendations: recommendations || [], isLoading: false }
-            : c,
-        ),
+      if (!res.ok) throw new Error('Request failed');
+
+      const data = await res.json();
+
+      setConversations(prev =>
+        prev.map(c => c.id === tempId
+          ? { ...c, recommendations: data.recommendations || [], isLoading: false }
+          : c
+        )
       );
       scrollToBottom();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Something went wrong. Please try again.');
-      // Remove loading state but keep the query visible
-      setConversations((prev) =>
-        prev.map((c) => (c.id === tempId ? { ...c, isLoading: false } : c)),
+      setError('Something went wrong. Try again.');
+      setConversations(prev =>
+        prev.map(c => c.id === tempId ? { ...c, isLoading: false } : c)
       );
     }
   }, []);
 
-  const loadHistory = useCallback(async () => {
-    try {
-      const response = await recommendationAPI.getConversationHistory();
-      const history: ConversationEntry[] = response.data.map((item: any) => ({
-        id: item.id,
-        query: item.query,
-        recommendations: (item.recommendations || [])
-          .filter((r: any) => r.name)
-          .map((r: any) => ({
-            name: r.name,
-            category: r.category,
-            why_recommended: r.why_recommended,
-            suggested_times: r.suggested_times,
-          })),
-        timestamp: new Date(item.created_at),
-        isLoading: false,
-      }));
-
-      setConversations(history.reverse());
-    } catch {
-      // Silently fail on history load — not critical
-    }
-  }, []);
-
-  const isAnyLoading = conversations.some((c) => c.isLoading);
-
-  return {
-    conversations,
-    isLoading: isAnyLoading,
-    error,
-    submitQuery,
-    loadHistory,
-    scrollRef,
-  };
+  return { conversations, isLoading: conversations.some(c => c.isLoading), error, submitQuery, scrollRef };
 }

@@ -1,75 +1,50 @@
 import { useState, useEffect } from 'react';
 
-interface GeolocationState {
+interface Geo {
   latitude: number | null;
   longitude: number | null;
   city: string | null;
   loading: boolean;
-  error: string | null;
 }
 
 export function useGeolocation() {
-  const [state, setState] = useState<GeolocationState>(() => {
-    // Try to load cached location
-    const cached = localStorage.getItem('hedge_location');
+  const [geo, setGeo] = useState<Geo>(() => {
+    const cached = localStorage.getItem('hedge_geo');
     if (cached) {
-      try {
-        return { ...JSON.parse(cached), loading: false, error: null };
-      } catch {
-        // ignore
-      }
+      try { return { ...JSON.parse(cached), loading: false }; } catch {}
     }
-    return { latitude: null, longitude: null, city: null, loading: true, error: null };
+    return { latitude: null, longitude: null, city: null, loading: true };
   });
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setState((prev) => ({ ...prev, loading: false, error: 'Geolocation not supported' }));
+      setGeo(prev => ({ ...prev, loading: false }));
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-
-        // Reverse geocode to get city name
+      async ({ coords }) => {
+        const { latitude, longitude } = coords;
         let city: string | null = null;
+
         try {
-          const response = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&result_type=locality&key=${import.meta.env.VITE_GOOGLE_CLIENT_ID ? '' : ''}`,
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
           );
-
-          // If geocoding API isn't available, try a free alternative
-          const geoResponse = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-          );
-          if (geoResponse.ok) {
-            const data = await geoResponse.json();
-            city =
-              data.address?.city ||
-              data.address?.town ||
-              data.address?.village ||
-              data.address?.county ||
-              null;
+          if (res.ok) {
+            const data = await res.json();
+            city = data.address?.city || data.address?.town || data.address?.village || null;
           }
-        } catch {
-          // City name is nice to have, not critical
-        }
+        } catch {}
 
-        const locationData = { latitude, longitude, city };
-        localStorage.setItem('hedge_location', JSON.stringify(locationData));
-        setState({ ...locationData, loading: false, error: null });
+        const result = { latitude, longitude, city, loading: false };
+        localStorage.setItem('hedge_geo', JSON.stringify({ latitude, longitude, city }));
+        setGeo(result);
       },
-      (error) => {
-        setState((prev) => ({
-          ...prev,
-          loading: false,
-          error: error.code === 1 ? 'Location permission denied' : 'Could not get location',
-        }));
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 },
+      () => setGeo(prev => ({ ...prev, loading: false })),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
     );
   }, []);
 
-  return state;
+  return geo;
 }

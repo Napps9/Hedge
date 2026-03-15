@@ -2,50 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-  html {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+html { -webkit-font-smoothing: antialiased; }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
-    background: #ffffff;
-    color: #000000;
-    line-height: 1.6;
-  }
-
-  ::selection {
-    background: #000;
-    color: #fff;
-  }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  background: #fff;
+  color: #000;
 }
 
-@layer components {
-  .container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
+::selection { background: #000; color: #fff; }
 
-  /* Scrollbar styling */
-  .custom-scroll::-webkit-scrollbar {
-    width: 4px;
-  }
-  .custom-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scroll::-webkit-scrollbar-thumb {
-    background: #e5e5e5;
-    border-radius: 2px;
-  }
-  .custom-scroll::-webkit-scrollbar-thumb:hover {
-    background: #ccc;
-  }
-}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e5e5e5; border-radius: 2px; }

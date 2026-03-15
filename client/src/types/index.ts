@@ -2,20 +2,16 @@ export interface Recommendation {
   name: string;
   category: string;
   why_recommended: string;
-  google_places_link?: string;
+  google_places_link: string;
   suggested_times?: string;
+  rating?: number | null;
+  price?: string | null;
 }
 
-export interface ConversationMessage {
+export interface Conversation {
   id: string;
-  type: 'query' | 'recommendation';
-  content: string | Recommendation[];
+  query: string;
+  recommendations: Recommendation[];
   timestamp: Date;
-  recommendations?: Recommendation[];
-}
-
-export interface User {
-  id: string;
-  email: string;
-  created_at: Date;
+  isLoading: boolean;
 }
