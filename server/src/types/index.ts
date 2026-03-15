@@ -5,6 +5,7 @@ export interface PlaceResult {
   priceLevel: string | null;
   types: string[];
   googleMapsUrl: string;
+  photoUrl: string | null;
 }
 
 export interface Recommendation {
@@ -15,6 +16,7 @@ export interface Recommendation {
   suggested_times?: string;
   rating?: number | null;
   price?: string | null;
+  photo_url?: string | null;
 }
 
 export interface ConversationEntry {

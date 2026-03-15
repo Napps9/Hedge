@@ -7,6 +7,7 @@ const defaultPreferences: UserPreferences = {
   restaurants: [],
   cafes: [],
   bars: [],
+  favouritePlaces: [],
   completed: false,
 };
 
@@ -14,7 +15,10 @@ export function usePreferences() {
   const [preferences, setPreferences] = useState<UserPreferences>(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      try { return JSON.parse(stored); } catch {}
+      try {
+        const parsed = JSON.parse(stored);
+        return { ...defaultPreferences, ...parsed };
+      } catch {}
     }
     return defaultPreferences;
   });
@@ -32,6 +36,16 @@ export function usePreferences() {
     save({ ...preferences, [category]: updated });
   };
 
+  const addFavourite = (name: string) => {
+    if (!preferences.favouritePlaces.includes(name)) {
+      save({ ...preferences, favouritePlaces: [...preferences.favouritePlaces, name] });
+    }
+  };
+
+  const removeFavourite = (name: string) => {
+    save({ ...preferences, favouritePlaces: preferences.favouritePlaces.filter(n => n !== name) });
+  };
+
   const completeOnboarding = () => {
     save({ ...preferences, completed: true });
   };
@@ -40,5 +54,5 @@ export function usePreferences() {
     save(defaultPreferences);
   };
 
-  return { preferences, toggleItem, completeOnboarding, resetOnboarding };
+  return { preferences, toggleItem, addFavourite, removeFavourite, completeOnboarding, resetOnboarding };
 }

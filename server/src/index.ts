@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import recommendationRoutes from './routes/recommendations.js';
+import placesRoutes from './routes/places.js';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/places', placesRoutes);
 
 app.listen(PORT, () => {
   const hasClaude = !!process.env.CLAUDE_API_KEY;

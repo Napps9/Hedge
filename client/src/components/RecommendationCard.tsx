@@ -1,9 +1,33 @@
 import { Recommendation } from '../types';
 
-export default function RecommendationCard({ rec }: { rec: Recommendation }) {
+interface Props {
+  rec: Recommendation;
+  onView?: (rec: Recommendation) => void;
+}
+
+export default function RecommendationCard({ rec, onView }: Props) {
+  const handleBookClick = () => {
+    if (onView) onView(rec);
+  };
+
   return (
     <div className="py-5 border-b-2 border-neutral-200 last:border-0">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-4">
+        {/* Image thumbnail */}
+        <div className="shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-neutral-100">
+          {rec.photo_url ? (
+            <img src={rec.photo_url} alt={rec.name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-neutral-300">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <h4 className="text-[1.05rem] font-medium truncate">{rec.name}</h4>
@@ -33,11 +57,13 @@ export default function RecommendationCard({ rec }: { rec: Recommendation }) {
           )}
         </div>
 
+        {/* Book button */}
         {rec.google_places_link && (
           <a
             href={rec.google_places_link}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={handleBookClick}
             className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-black text-white text-caption font-medium rounded-full hover:bg-neutral-800 transition-colors"
             aria-label={`Book ${rec.name}`}
           >

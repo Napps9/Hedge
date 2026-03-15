@@ -25,6 +25,13 @@ router.post('/', async (req: Request, res: Response) => {
     // Get Claude's recommendations
     const result = await getRecommendations(query, city || null, places);
 
+    // Attach photo URLs by matching recommendation names to place results
+    const placeMap = new Map(places.map(p => [p.name.toLowerCase(), p.photoUrl]));
+    for (const rec of result.recommendations) {
+      const photoUrl = placeMap.get(rec.name.toLowerCase());
+      if (photoUrl) rec.photo_url = photoUrl;
+    }
+
     // Save to history
     const entry: ConversationEntry = {
       id: `conv-${Date.now()}`,

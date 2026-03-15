@@ -6,6 +6,7 @@ export interface Recommendation {
   suggested_times?: string;
   rating?: number | null;
   price?: string | null;
+  photo_url?: string | null;
 }
 
 export interface Conversation {
@@ -20,5 +21,6 @@ export interface UserPreferences {
   restaurants: string[];
   cafes: string[];
   bars: string[];
+  favouritePlaces: string[];
   completed: boolean;
 }

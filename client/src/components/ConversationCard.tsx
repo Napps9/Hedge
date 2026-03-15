@@ -1,8 +1,13 @@
-import { Conversation } from '../types';
+import { Conversation, Recommendation } from '../types';
 import RecommendationCard from './RecommendationCard';
 import LoadingPulse from './LoadingPulse';
 
-export default function ConversationCard({ conv }: { conv: Conversation }) {
+interface Props {
+  conv: Conversation;
+  onViewPlace?: (rec: Recommendation) => void;
+}
+
+export default function ConversationCard({ conv, onViewPlace }: Props) {
   const time = new Date(conv.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
@@ -17,7 +22,7 @@ export default function ConversationCard({ conv }: { conv: Conversation }) {
       {!conv.isLoading && conv.recommendations.length > 0 && (
         <div className="pl-5 border-l-2 border-black">
           {conv.recommendations.map((rec, i) => (
-            <RecommendationCard key={i} rec={rec} />
+            <RecommendationCard key={i} rec={rec} onView={onViewPlace} />
           ))}
         </div>
       )}
